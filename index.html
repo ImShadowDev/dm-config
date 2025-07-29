@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⌊ GENERADOR DE MENU - DELUXEMENU ⌉</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 25px;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            border-bottom: 3px solid #00ff88;
+            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #00ff88, #00d4aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 400px 1fr 350px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .config-panel, .preview-panel, .item-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-title {
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            color: #00ff88;
+            text-align: center;
+            border-bottom: 2px solid rgba(0, 255, 136, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .config-group {
+            margin-bottom: 20px;
+        }
+
+        .config-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .config-group input, .config-group select, .config-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .config-group input:focus, .config-group select:focus, .config-group textarea:focus {
+            border-color: #00ff88;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+            outline: none;
+        }
+
+        .config-group textarea {
+            height: 100px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+
+        .menu-preview {
+            text-align: center;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 3px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 12px;
+            margin: 20px auto;
+            width: fit-content;
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .inventory-slot {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 2px solid #444;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .inventory-slot:hover {
+            border-color: #00ff88;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+            transform: scale(1.1);
+        }
+
+        .inventory-slot.occupied {
+            background: linear-gradient(145deg, #00ff88, #00d4aa);
+            border-color: #00ff88;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+        }
+
+        .inventory-slot.selected {
+            border-color: #ff6b35;
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.8);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .material-icon {
+            width: 35px;
+            height: 35px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .item-editor {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .item-editor::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .item-editor::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        .item-editor::-webkit-scrollbar-thumb {
+            background: #00ff88;
+            border-radius: 4px;
+        }
+
+        .requirements-section, .commands-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border-left: 4px solid #00ff88;
+        }
+
+        .requirement-item, .command-item {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #00ff88, #00d4aa);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #5f27cd, #341f97);
+        }
+
+        .yaml-output {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .advanced-options {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .advanced-options.active {
+            display: block;
+        }
+
+        .toggle-btn {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(0, 255, 136, 0.3);
+        }
+
+        .slots-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .slot-tag {
+            background: #00ff88;
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .slot-tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .import-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .import-dialog.active {
+            display: flex;
+        }
+
+        .import-content {
+            background: linear-gradient(145deg, #1a1a2e, #0c0c0c);
+            padding: 30px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80%;
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .import-textarea {
+            width: 100%;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+            color: white;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        .import-textarea:focus {
+            border-color: #00ff88;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+            outline: none;
+        }
+
+        .import-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .material-preview {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 10px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 2px solid #444;
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+            }
+        }
+
+        .command-type-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .command-type-btn {
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .command-type-btn:hover, .command-type-btn.active {
+            background: rgba(0, 255, 136, 0.2);
+            border-color: #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⌊🎮 GENERADOR DE MENU - DELUXEMENU 🎮⌉</h1>
+        <p>Generador avanzado de menús para Minecraft con muchas características</p>
+    </div>
+
+    <div class="main-container">
+        <!-- Panel de Configuración General -->
+        <div class="config-panel">
+            <h2 class="panel-title">⚙️ - Configuración General</h2>
+            
+            <div class="config-group">
+                <label for="menuName">Nombre del Menú:</label>
+                <input type="text" id="menuName" value="mi_menu_avanzado" onchange="updatePreview()">
+            </div>
+
+            <div class="config-group">
+                <label for="menuTitle">Título del Menú:</label>
+                <input type="text" id="menuTitle" value="&7▸ &a⌊ Mi Menú ⌉" onchange="updatePreview()">
+            </div>
+
+            <div class="config-group">
+                <label for="menuSize">Tamaño del Menú:</label>
+                <select id="menuSize" onchange="updatePreview()">
+                    <option value="9">1 fila (9 slots)</option>
+                    <option value="18">2 filas (18 slots)</option>
+                    <option value="27">3 filas (27 slots)</option>
+                    <option value="36">4 filas (36 slots)</option>
+                    <option value="45">5 filas (45 slots)</option>
+                    <option value="54" selected>6 filas (54 slots)</option>
+                </select>
+            </div>
+
+            <div class="config-group">
+                <label for="openCommands">Comandos para abrir (uno por línea):</label>
+                <textarea id="openCommands" placeholder="menu&#10;mi-menu&#10;shop" onchange="updatePreview()">menu</textarea>
+            </div>
+
+            <button class="toggle-btn" onclick="toggleAdvanced('menuRequirements')">
+                📋 Requisitos de Apertura
+            </button>
+            <div id="menuRequirements" class="advanced-options">
+                <div class="config-group">
+                    <label>Requisitos para abrir el menú:</label>
+                    <div id="openRequirements"></div>
+                    <button class="btn btn-secondary" onclick="addOpenRequirement()">+ Agregar Requisito</button>
+                </div>
+                
+                <div class="config-group">
+                    <label>Comandos de denegación:</label>
+                    <textarea id="denyCommands" placeholder="[message] &cNo puedes abrir este menú aquí." onchange="updatePreview()"></textarea>
+                </div>
+            </div>
+
+            <div class="yaml-output">
+                <h3>📋 Configuración YAML:</h3>
+                <pre id="yamlOutput"></pre>
+                <button class="btn" onclick="copyYaml()">📋 Copiar YAML</button>
+                <button class="btn btn-secondary" onclick="saveConfig()">💾 Guardar Config</button>
+                <button class="btn btn-secondary" onclick="loadConfig()">📂 Cargar Config</button>
+                <button class="btn" onclick="showImportDialog()" style="background: linear-gradient(45deg, #ff6b35, #f7931e);">📥 Importar YAML</button>
+            </div>
+        </div>
+
+        <!-- Panel de Vista Previa -->
+        <div class="preview-panel">
+            <h2 class="panel-title">👁️ Vista Previa del Menú</h2>
+            <div class="menu-preview">
+                <div style="font-size: 1.2em; margin-bottom: 15px; color: #00ff88;" id="previewTitle">Mi Menú</div>
+                <div class="inventory-grid" id="inventoryGrid"></div>
+                <p style="margin-top: 15px; opacity: 0.8; font-size: 14px;">
+                    🖱️ Haz clic en un slot para editarlo
+                </p>
+            </div>
+        </div>
+
+        <!-- Panel de Edición de Items -->
+        <div class="item-panel">
+            <h2 class="panel-title">✏️ Editor de Items</h2>
+            <div class="item-editor" id="itemEditor">
+                <p style="text-align: center; opacity: 0.6; margin-top: 50px;">
+                    Selecciona un slot para comenzar a editar
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import YAML Dialog -->
+    <div id="importDialog" class="import-dialog">
+        <div class="import-content">
+            <h2 style="text-align: center; color: #00ff88; margin-bottom: 20px;">
+                📥 Importar Configuración YAML
+            </h2>
+            <p style="margin-bottom: 15px; opacity: 0.8;">
+                Pega aquí tu configuración YAML de DeluxeMenu existente:
+            </p>
+            <textarea id="importTextarea" class="import-textarea" placeholder="menu_name:
+  menu_title: '&7▸ &a⌊ Mi Menú ⌉'
+  size: 54
+  open_command:
+    - menu
+  items:
+    'item1':
+      material: DIAMOND
+      slot: 10
+      display_name: '&aMi Item'
+      ..."></textarea>
+            <div class="import-buttons">
+                <button class="btn" onclick="importYaml()">✅ Importar y Cargar</button>
+                <button class="btn btn-secondary" onclick="closeImportDialog()">❌ Cancelar</button>
+            </div>
+            <div style="margin-top: 15px; font-size: 12px; opacity: 0.7;">
+                💡 <strong>Tip:</strong> Puedes pegar configuraciones completas de DeluxeMenu. 
+                La herramienta detectará automáticamente todos los items, comandos, requisitos y configuraciones.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let menuItems = {};
+        let selectedSlot = null;
+        let openRequirements = {};
+
+        const materialIcons = {
+            'DIAMOND': '💎', 'EMERALD': '💚', 'GOLD_INGOT': '🥇', 'IRON_INGOT': '⚫',
+            'REDSTONE': '🔴', 'CHEST': '📦', 'BOOK': '📖', 'COMPASS': '🧭',
+            'CLOCK': '⏰', 'BARRIER': '🚫', 'DIAMOND_SWORD': '⚔️', 'BOW': '🏹',
+            'DIAMOND_HELMET': '🪖', 'DIAMOND_CHESTPLATE': '🛡️', 'DIAMOND_LEGGINGS': '👖',
+            'DIAMOND_BOOTS': '👢', 'ENCHANTED_BOOK': '📚', 'ENDER_PEARL': '🔮',
+            'GREEN_STAINED_GLASS_PANE': '🟢', 'RED_STAINED_GLASS_PANE': '🔴',
+            'BLUE_STAINED_GLASS_PANE': '🔵', 'YELLOW_STAINED_GLASS_PANE': '🟡',
+            'WHITE_STAINED_GLASS_PANE': '⚪', 'BLACK_STAINED_GLASS_PANE': '⚫',
+            'PLAYER_HEAD': '👤', 'SKULL_ITEM': '💀'
+        };
+
+        const commandTypes = [
+            { type: '[message]', desc: 'Mensaje al jugador', placeholder: '[message] &aHola mundo!' },
+            { type: '[console]', desc: 'Comando de consola', placeholder: '[console] give %player_name% diamond 1' },
+            { type: '[player]', desc: 'Comando del jugador', placeholder: '[player] warp spawn' },
+            { type: '[openguimenu]', desc: 'Abrir otro menú', placeholder: '[openguimenu] otro_menu' },
+            { type: '[close]', desc: 'Cerrar menú', placeholder: '[close]' },
+            { type: '[refresh]', desc: 'Refrescar menú', placeholder: '[refresh]' },
+            { type: '[sound]', desc: 'Reproducir sonido', placeholder: '[sound] ENTITY_EXPERIENCE_ORB_PICKUP-1-1' },
+            { type: '[actionbar]', desc: 'Mensaje en actionbar', placeholder: '[actionbar] &aTexto en actionbar' },
+            { type: '[title]', desc: 'Título en pantalla', placeholder: '[title] &aTítulo;Subtítulo;1;2;1' }
+        ];
+
+        function toggleAdvanced(id) {
+            const element = document.getElementById(id);
+            element.classList.toggle('active');
+        }
+
+        function updatePreview() {
+            const size = parseInt(document.getElementById('menuSize').value);
+            const title = document.getElementById('menuTitle').value;
+            const grid = document.getElementById('inventoryGrid');
+            const previewTitle = document.getElementById('previewTitle');
+            
+            previewTitle.innerHTML = title.replace(/&([0-9a-fk-or])/g, '<span style="color: var(--mc-$1)">').replace(/&l/g, '<b>').replace(/&n/g, '<u>');
+            
+            const rows = size / 9;
+            grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+            
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < size; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'inventory-slot';
+                slot.onclick = () => selectSlot(i);
+                
+                if (selectedSlot === i) {
+                    slot.classList.add('selected');
+                }
+                
+                if (menuItems[i]) {
+                    slot.classList.add('occupied');
+                    const icon = getMaterialIcon(menuItems[i].material);
+                    slot.innerHTML = icon;
+                } else {
+                    // Check if this slot is part of a multi-slot item
+                    const multiSlotItem = Object.values(menuItems).find(item => 
+                        item.slots && item.slots.includes(i)
+                    );
+                    if (multiSlotItem) {
+                        slot.classList.add('occupied');
+                        const icon = getMaterialIcon(multiSlotItem.material);
+                        slot.innerHTML = icon;
+                        slot.style.opacity = '0.7';
+                    }
+                }
+                
+                grid.appendChild(slot);
+            }
+            
+            generateYaml();
+        }
+
+        function selectSlot(slotNumber) {
+            selectedSlot = slotNumber;
+            updatePreview();
+            showItemEditor();
+        }
+
+        function showItemEditor() {
+            const editor = document.getElementById('itemEditor');
+            const item = menuItems[selectedSlot] || createNewItem();
+            
+            editor.innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div class="material-preview" id="materialPreview">${getMaterialIcon(item.material)}</div>
+                    <strong>Editando Slot ${selectedSlot}</strong>
+                </div>
+
+                <div class="config-group">
+                    <label for="itemName">Nombre del Item:</label>
+                    <input type="text" id="itemName" value="${item.display_name || ''}" onchange="updateCurrentItem()">
+                </div>
+
+                <div class="config-group">
+                    <label for="itemMaterial">Material:</label>
+                    <select id="itemMaterial" onchange="updateCurrentItem()">
+                        ${generateMaterialOptions(item.material)}
+                    </select>
+                </div>
+
+                <div class="config-group">
+                    <label for="customMaterial">Material Personalizado:</label>
+                    <input type="text" id="customMaterial" placeholder="WOOL:14 o STAINED_GLASS_PANE:5 o mi_item_custom" onchange="updateCurrentItem()">
+                    <small style="opacity: 0.7; font-size: 12px; display: block; margin-top: 5px;">
+                        💡 Ejemplos: WOOL:14 (lana roja 1.8), STAINED_GLASS_PANE:5 (cristal lima), basehead-eyJ0ZXh0dXJlcyI6e...
+                    </small>
+                </div>
+
+                <div class="config-group">
+                    <label for="itemData">Data Value (1.8):</label>
+                    <input type="number" id="itemData" min="0" max="15" placeholder="0-15" onchange="updateCurrentItem()">
+                    <small style="opacity: 0.7; font-size: 12px; display: block; margin-top: 5px;">
+                        🎨 Para versiones 1.8: 0=Blanco, 1=Naranja, 2=Magenta, 3=Azul claro, 4=Amarillo, 5=Lima, 6=Rosa, 7=Gris, 8=Gris claro, 9=Cian, 10=Púrpura, 11=Azul, 12=Marrón, 13=Verde, 14=Rojo, 15=Negro
+                    </small>
+                </div>
+
+                <div class="config-group">
+                    <label for="itemAmount">Cantidad:</label>
+                    <input type="number" id="itemAmount" min="1" max="64" value="${item.amount || 1}" onchange="updateCurrentItem()">
+                </div>
+
+                <div class="config-group">
+                    <label for="itemLore">Descripción (lore):</label>
+                    <textarea id="itemLore" onchange="updateCurrentItem()" placeholder="- '&7Primera línea'&#10;- '&aSegunda línea'&#10;- '&cTercera línea'">${(item.lore || []).join('\\n')}</textarea>
+                </div>
+
+                <div class="config-group">
+                    <label for="itemPriority">Prioridad:</label>
+                    <input type="number" id="itemPriority" value="${item.priority || 1}" min="1" onchange="updateCurrentItem()">
+                </div>
+
+                <button class="toggle-btn" onclick="toggleAdvanced('multiSlots')">
+                    📐 Slots Múltiples
+                </button>
+                <div id="multiSlots" class="advanced-options">
+                    <div class="config-group">
+                        <label>Slots adicionales (separados por coma o rango como 0-8):</label>
+                        <input type="text" id="itemSlots" placeholder="10,11,12 o 0-8" onchange="updateCurrentItem()">
+                        <div class="slots-input" id="currentSlots"></div>
+                    </div>
+                </div>
+
+                <button class="toggle-btn" onclick="toggleAdvanced('itemRequirements')">
+                    📋 Requisitos para Click
+                </button>
+                <div id="itemRequirements" class="advanced-options">
+                    <h4>Click Izquierdo:</h4>
+                    <div id="leftRequirements"></div>
+                    <button class="btn btn-secondary" onclick="addRequirement('left')">+ Agregar Requisito</button>
+                    
+                    <h4 style="margin-top: 15px;">Click Derecho:</h4>
+                    <div id="rightRequirements"></div>
+                    <button class="btn btn-secondary" onclick="addRequirement('right')">+ Agregar Requisito</button>
+                </div>
+
+                <div class="commands-section">
+                    <h3>⚡ Comandos de Click Izquierdo</h3>
+                    <div class="command-type-selector">
+                        ${commandTypes.map(cmd => `
+                            <div class="command-type-btn" onclick="addCommand('left', '${cmd.type}')" title="${cmd.desc}">
+                                ${cmd.type}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div id="leftCommands"></div>
+                </div>
+
+                <div class="commands-section">
+                    <h3>⚡ Comandos de Click Derecho</h3>
+                    <div class="command-type-selector">
+                        ${commandTypes.map(cmd => `
+                            <div class="command-type-btn" onclick="addCommand('right', '${cmd.type}')" title="${cmd.desc}">
+                                ${cmd.type}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div id="rightCommands"></div>
+                </div>
+
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn" onclick="saveCurrentItem()">💾 Guardar Item</button>
+                    <button class="btn btn-danger" onclick="deleteCurrentItem()">🗑️ Eliminar Item</button>
+                </div>
+            `;
+
+            loadItemData(item);
+        }
+
+        function createNewItem() {
+            return {
+                material: 'DIAMOND',
+                display_name: '&fNuevo Item',
+                lore: [],
+                priority: 1,
+                left_click_commands: [],
+                right_click_commands: []
+            };
+        }
+
+        function generateMaterialOptions(selectedMaterial) {
+            const materials = [
+                // Bloques básicos
+                'STONE', 'GRANITE', 'DIORITE', 'ANDESITE', 'GRASS_BLOCK', 'DIRT', 'COARSE_DIRT', 'PODZOL',
+                'COBBLESTONE', 'OAK_PLANKS', 'SPRUCE_PLANKS', 'BIRCH_PLANKS', 'JUNGLE_PLANKS', 'ACACIA_PLANKS', 'DARK_OAK_PLANKS',
+                'BEDROCK', 'SAND', 'RED_SAND', 'GRAVEL', 'GOLD_ORE', 'IRON_ORE', 'COAL_ORE', 'DIAMOND_ORE', 'EMERALD_ORE',
+                'REDSTONE_ORE', 'LAPIS_ORE', 'OAK_LOG', 'SPRUCE_LOG', 'BIRCH_LOG', 'JUNGLE_LOG',
+                
+                // Lanas (1.8 y 1.13+)
+                'WHITE_WOOL', 'ORANGE_WOOL', 'MAGENTA_WOOL', 'LIGHT_BLUE_WOOL', 'YELLOW_WOOL', 'LIME_WOOL',
+                'PINK_WOOL', 'GRAY_WOOL', 'LIGHT_GRAY_WOOL', 'CYAN_WOOL', 'PURPLE_WOOL', 'BLUE_WOOL',
+                'BROWN_WOOL', 'GREEN_WOOL', 'RED_WOOL', 'BLACK_WOOL', 'WOOL',
+                
+                // Cristales de colores
+                'WHITE_STAINED_GLASS', 'ORANGE_STAINED_GLASS', 'MAGENTA_STAINED_GLASS', 'LIGHT_BLUE_STAINED_GLASS',
+                'YELLOW_STAINED_GLASS', 'LIME_STAINED_GLASS', 'PINK_STAINED_GLASS', 'GRAY_STAINED_GLASS',
+                'LIGHT_GRAY_STAINED_GLASS', 'CYAN_STAINED_GLASS', 'PURPLE_STAINED_GLASS', 'BLUE_STAINED_GLASS',
+                'BROWN_STAINED_GLASS', 'GREEN_STAINED_GLASS', 'RED_STAINED_GLASS', 'BLACK_STAINED_GLASS',
+                'WHITE_STAINED_GLASS_PANE', 'ORANGE_STAINED_GLASS_PANE', 'MAGENTA_STAINED_GLASS_PANE', 'LIGHT_BLUE_STAINED_GLASS_PANE',
+                'YELLOW_STAINED_GLASS_PANE', 'LIME_STAINED_GLASS_PANE', 'PINK_STAINED_GLASS_PANE', 'GRAY_STAINED_GLASS_PANE',
+                'LIGHT_GRAY_STAINED_GLASS_PANE', 'CYAN_STAINED_GLASS_PANE', 'PURPLE_STAINED_GLASS_PANE', 'BLUE_STAINED_GLASS_PANE',
+                'BROWN_STAINED_GLASS_PANE', 'GREEN_STAINED_GLASS_PANE', 'RED_STAINED_GLASS_PANE', 'BLACK_STAINED_GLASS_PANE',
+                'GLASS', 'GLASS_PANE', 'STAINED_GLASS_PANE',
+                
+                // Items de combate
+                'DIAMOND_SWORD', 'IRON_SWORD', 'GOLDEN_SWORD', 'STONE_SWORD', 'WOODEN_SWORD', 'NETHERITE_SWORD',
+                'DIAMOND_AXE', 'IRON_AXE', 'GOLDEN_AXE', 'STONE_AXE', 'WOODEN_AXE', 'NETHERITE_AXE',
+                'BOW', 'CROSSBOW', 'TRIDENT', 'SHIELD',
+                
+                // Armaduras
+                'DIAMOND_HELMET', 'DIAMOND_CHESTPLATE', 'DIAMOND_LEGGINGS', 'DIAMOND_BOOTS',
+                'IRON_HELMET', 'IRON_CHESTPLATE', 'IRON_LEGGINGS', 'IRON_BOOTS',
+                'GOLDEN_HELMET', 'GOLDEN_CHESTPLATE', 'GOLDEN_LEGGINGS', 'GOLDEN_BOOTS',
+                'LEATHER_HELMET', 'LEATHER_CHESTPLATE', 'LEATHER_LEGGINGS', 'LEATHER_BOOTS',
+                'CHAINMAIL_HELMET', 'CHAINMAIL_CHESTPLATE', 'CHAINMAIL_LEGGINGS', 'CHAINMAIL_BOOTS',
+                'NETHERITE_HELMET', 'NETHERITE_CHESTPLATE', 'NETHERITE_LEGGINGS', 'NETHERITE_BOOTS',
+                
+                // Items especiales
+                'DIAMOND', 'EMERALD', 'GOLD_INGOT', 'IRON_INGOT', 'NETHERITE_INGOT',
+                'REDSTONE', 'LAPIS_LAZULI', 'COAL', 'CHARCOAL',
+                'ENDER_PEARL', 'ENDER_EYE', 'BLAZE_ROD', 'BLAZE_POWDER',
+                'BOOK', 'ENCHANTED_BOOK', 'WRITTEN_BOOK', 'WRITABLE_BOOK',
+                'MAP', 'COMPASS', 'CLOCK', 'RECOVERY_COMPASS',
+                'CHEST', 'ENDER_CHEST', 'SHULKER_BOX', 'BARREL',
+                'CRAFTING_TABLE', 'FURNACE', 'ANVIL', 'ENCHANTING_TABLE',
+                
+                // Heads y skulls
+                'PLAYER_HEAD', 'ZOMBIE_HEAD', 'CREEPER_HEAD', 'DRAGON_HEAD', 'SKELETON_SKULL', 'WITHER_SKELETON_SKULL',
+                'SKULL_ITEM',
+                
+                // Items de utilidad
+                'BARRIER', 'STRUCTURE_VOID', 'COMMAND_BLOCK', 'REPEATING_COMMAND_BLOCK', 'CHAIN_COMMAND_BLOCK',
+                'BEDROCK', 'SPAWNER', 'END_PORTAL_FRAME',
+                
+                // Comida
+                'APPLE', 'GOLDEN_APPLE', 'ENCHANTED_GOLDEN_APPLE', 'BREAD', 'COOKED_BEEF', 'COOKED_PORKCHOP',
+                'COOKED_CHICKEN', 'COOKED_COD', 'COOKED_SALMON', 'CAKE', 'COOKIE'
+            ];
+            
+            // Add custom option at the top
+            let options = '<option value="CUSTOM">🎨 Material Personalizado</option>';
+            
+            return options + materials.map(material => 
+                `<option value="${material}" ${material === selectedMaterial ? 'selected' : ''}>${material}</option>`
+            ).join('');
+        }
+
+        function getMaterialIcon(material) {
+            // Handle custom materials
+            if (material && material.startsWith('basehead-')) {
+                return '👤';
+            }
+            
+            // Handle data values (like WOOL:14, STAINED_GLASS_PANE:5)
+            const baseMaterial = material ? material.split(':')[0] : 'DIAMOND';
+            const dataValue = material && material.includes(':') ? parseInt(material.split(':')[1]) : 0;
+            
+            // Special handling for colored items with data values
+            if (baseMaterial === 'WOOL' || baseMaterial === 'STAINED_GLASS_PANE' || baseMaterial === 'STAINED_GLASS') {
+                const colorIcons = ['⚪', '🟠', '🟣', '🔵', '🟡', '🟢', '🩷', '⚫', '🔘', '🩵', '🟣', '🔵', '🟤', '🟢', '🔴', '⚫'];
+                return colorIcons[dataValue] || materialIcons[baseMaterial] || '🎨';
+            }
+            
+            // Extended material icons
+            const extendedIcons = {
+                ...materialIcons,
+                'WOOL': '⚪', 'STAINED_GLASS_PANE': '🟢', 'STAINED_GLASS': '🔵',
+                'WHITE_WOOL': '⚪', 'ORANGE_WOOL': '🟠', 'MAGENTA_WOOL': '🟣', 'LIGHT_BLUE_WOOL': '🔵',
+                'YELLOW_WOOL': '🟡', 'LIME_WOOL': '🟢', 'PINK_WOOL': '🩷', 'GRAY_WOOL': '⚫',
+                'LIGHT_GRAY_WOOL': '🔘', 'CYAN_WOOL': '🩵', 'PURPLE_WOOL': '🟣', 'BLUE_WOOL': '🔵',
+                'BROWN_WOOL': '🟤', 'GREEN_WOOL': '🟢', 'RED_WOOL': '🔴', 'BLACK_WOOL': '⚫',
+                'WHITE_STAINED_GLASS_PANE': '⚪', 'ORANGE_STAINED_GLASS_PANE': '🟠', 'MAGENTA_STAINED_GLASS_PANE': '🟣',
+                'LIGHT_BLUE_STAINED_GLASS_PANE': '🔵', 'YELLOW_STAINED_GLASS_PANE': '🟡', 'LIME_STAINED_GLASS_PANE': '🟢',
+                'PINK_STAINED_GLASS_PANE': '🩷', 'GRAY_STAINED_GLASS_PANE': '⚫', 'LIGHT_GRAY_STAINED_GLASS_PANE': '🔘',
+                'CYAN_STAINED_GLASS_PANE': '🩵', 'PURPLE_STAINED_GLASS_PANE': '🟣', 'BLUE_STAINED_GLASS_PANE': '🔵',
+                'BROWN_STAINED_GLASS_PANE': '🟤', 'GREEN_STAINED_GLASS_PANE': '🟢', 'RED_STAINED_GLASS_PANE': '🔴',
+                'BLACK_STAINED_GLASS_PANE': '⚫',
+                'STONE': '🪨', 'COBBLESTONE': '🗿', 'GRASS_BLOCK': '🌱', 'DIRT': '🌰',
+                'SAND': '🏖️', 'GRAVEL': '⚪', 'BEDROCK': '⬛', 'OBSIDIAN': '⬛',
+                'GOLD_ORE': '🥇', 'IRON_ORE': '⚫', 'COAL_ORE': '⚫', 'DIAMOND_ORE': '💎',
+                'EMERALD_ORE': '💚', 'LAPIS_ORE': '🔵', 'REDSTONE_ORE': '🔴',
+                'OAK_LOG': '🪵', 'SPRUCE_LOG': '🪵', 'BIRCH_LOG': '🪵', 'JUNGLE_LOG': '🪵',
+                'DIAMOND_SWORD': '⚔️', 'IRON_SWORD': '🗡️', 'GOLDEN_SWORD': '🗡️', 'STONE_SWORD': '🗡️',
+                'BOW': '🏹', 'CROSSBOW': '🏹', 'TRIDENT': '🔱', 'SHIELD': '🛡️',
+                'APPLE': '🍎', 'GOLDEN_APPLE': '🍎', 'BREAD': '🍞', 'CAKE': '🎂',
+                'ENDER_PEARL': '🔮', 'ENDER_EYE': '👁️', 'BLAZE_ROD': '🔥', 'COAL': '⚫',
+                'LAPIS_LAZULI': '🔵', 'NETHERITE_INGOT': '⬛', 'CRAFTING_TABLE': '🔨',
+                'FURNACE': '🔥', 'CHEST': '📦', 'ENDER_CHEST': '📦', 'ANVIL': '⚒️',
+                'ENCHANTING_TABLE': '📚', 'SPAWNER': '🕳️', 'BARRIER': '🚫',
+                'PLAYER_HEAD': '👤', 'ZOMBIE_HEAD': '🧟', 'CREEPER_HEAD': '💚', 'SKELETON_SKULL': '💀',
+                'COMMAND_BLOCK': '📦', 'STRUCTURE_VOID': '🕳️'
+            };
+            
+            return extendedIcons[baseMaterial] || extendedIcons[material] || '❓';
+        }
+
+        function updateCurrentItem() {
+            if (selectedSlot === null) return;
+
+            const materialSelect = document.getElementById('itemMaterial').value;
+            const customMaterial = document.getElementById('customMaterial').value.trim();
+            const dataValue = document.getElementById('itemData').value;
+            
+            // Determine final material
+            let finalMaterial = materialSelect === 'CUSTOM' ? customMaterial : materialSelect;
+            
+            // Add data value if specified and not already in custom material
+            if (dataValue && !finalMaterial.includes(':') && materialSelect !== 'CUSTOM') {
+                finalMaterial = `${finalMaterial}:${dataValue}`;
+            }
+
+            const item = {
+                material: finalMaterial || 'DIAMOND',
+                display_name: document.getElementById('itemName').value,
+                lore: document.getElementById('itemLore').value.split('\n').filter(line => line.trim()),
+                priority: parseInt(document.getElementById('itemPriority').value) || 1,
+                amount: parseInt(document.getElementById('itemAmount').value) || 1,
+                left_click_commands: menuItems[selectedSlot]?.left_click_commands || [],
+                right_click_commands: menuItems[selectedSlot]?.right_click_commands || [],
+                left_click_requirement: menuItems[selectedSlot]?.left_click_requirement,
+                right_click_requirement: menuItems[selectedSlot]?.right_click_requirement
+            };
+
+            // Handle multiple slots
+            const slotsInput = document.getElementById('itemSlots')?.value;
+            if (slotsInput) {
+                item.slots = parseSlots(slotsInput);
+            }
+
+            menuItems[selectedSlot] = item;
+            
+            // Update material preview
+            const preview = document.getElementById('materialPreview');
+            if (preview) {
+                preview.innerHTML = getMaterialIcon(item.material);
+            }
+
+            // Update custom material field based on selection
+            const customField = document.getElementById('customMaterial');
+            if (customField) {
+                if (materialSelect === 'CUSTOM') {
+                    customField.style.display = 'block';
+                    customField.previousElementSibling.style.display = 'block';
+                } else {
+                    customField.style.display = 'none';
+                    customField.previousElementSibling.style.display = 'none';
+                }
+            }
+
+            updatePreview();
+        }
+
+        function parseSlots(slotsInput) {
+            const slots = [];
+            const parts = slotsInput.split(',');
+            
+            parts.forEach(part => {
+                part = part.trim();
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(n => parseInt(n));
+                    for (let i = start; i <= end; i++) {
+                        slots.push(i);
+                    }
+                } else {
+                    const slot = parseInt(part);
+                    if (!isNaN(slot)) {
+                        slots.push(slot);
+                    }
+                }
+            });
+            
+            return slots;
+        }
+
+        function addCommand(clickType, commandType) {
+            const placeholder = commandTypes.find(cmd => cmd.type === commandType)?.placeholder || commandType;
+            const commandsContainer = document.getElementById(clickType + 'Commands');
+            const commandDiv = document.createElement('div');
+            commandDiv.className = 'command-item';
+            commandDiv.innerHTML = `
+                <input type="text" value="${placeholder}" style="width: 80%; margin-right: 10px;" onchange="updateItemCommands()">
+                <button class="btn btn-danger" style="padding: 5px 10px;" onclick="this.parentElement.remove(); updateItemCommands();">✖</button>
+            `;
+            commandsContainer.appendChild(commandDiv);
+            updateItemCommands();
+        }
+
+        function updateItemCommands() {
+            if (selectedSlot === null || !menuItems[selectedSlot]) return;
+
+            const leftCommands = Array.from(document.querySelectorAll('#leftCommands input')).map(input => input.value).filter(cmd => cmd.trim());
+            const rightCommands = Array.from(document.querySelectorAll('#rightCommands input')).map(input => input.value).filter(cmd => cmd.trim());
+
+            menuItems[selectedSlot].left_click_commands = leftCommands;
+            menuItems[selectedSlot].right_click_commands = rightCommands;
+
+            generateYaml();
+        }
+
+        function loadItemData(item) {
+            // Load commands
+            loadCommands('left', item.left_click_commands || []);
+            loadCommands('right', item.right_click_commands || []);
+        }
+
+        function loadCommands(clickType, commands) {
+            const container = document.getElementById(clickType + 'Commands');
+            container.innerHTML = '';
+            
+            commands.forEach(command => {
+                const commandDiv = document.createElement('div');
+                commandDiv.className = 'command-item';
+                commandDiv.innerHTML = `
+                    <input type="text" value="${command}" style="width: 80%; margin-right: 10px;" onchange="updateItemCommands()">
+                    <button class="btn btn-danger" style="padding: 5px 10px;" onclick="this.parentElement.remove(); updateItemCommands();">✖</button>
+                `;
+                container.appendChild(commandDiv);
+            });
+        }
+
+        function saveCurrentItem() {
+            updateCurrentItem();
+            alert('✅ Item guardado correctamente');
+        }
+
+        function deleteCurrentItem() {
+            if (selectedSlot !== null && confirm('¿Estás seguro de que quieres eliminar este item?')) {
+                delete menuItems[selectedSlot];
+                selectedSlot = null;
+                document.getElementById('itemEditor').innerHTML = '<p style="text-align: center; opacity: 0.6; margin-top: 50px;">Selecciona un slot para comenzar a editar</p>';
+                updatePreview();
+            }
+        }
+
+        function generateYaml() {
+            const menuName = document.getElementById('menuName').value;
+            const menuTitle = document.getElementById('menuTitle').value;
+            const menuSize = document.getElementById('menuSize').value;
+            const openCommands = document.getElementById('openCommands').value.split('\n').filter(cmd => cmd.trim());
+
+            let yaml = `${menuName}:\n`;
+            yaml += `  menu_title: '${menuTitle}'\n`;
+            yaml += `  size: ${menuSize}\n`;
+            yaml += `  open_command:\n`;
+            openCommands.forEach(cmd => {
+                yaml += `    - ${cmd.trim()}\n`;
+            });
+
+            // Add open requirements if any
+            const denyCommands = document.getElementById('denyCommands').value;
+            if (Object.keys(openRequirements).length > 0 || denyCommands.trim()) {
+                yaml += `  open_requirement:\n`;
+                if (Object.keys(openRequirements).length > 0) {
+                    yaml += `    requirements:\n`;
+                    Object.keys(openRequirements).forEach(key => {
+                        const req = openRequirements[key];
+                        yaml += `      ${key}:\n`;
+                        yaml += `        type: "${req.type}"\n`;
+                        yaml += `        input: "${req.input}"\n`;
+                        yaml += `        output: "${req.output}"\n`;
+                    });
+                }
+                if (denyCommands.trim()) {
+                    yaml += `    deny_commands:\n`;
+                    denyCommands.split('\n').forEach(cmd => {
+                        if (cmd.trim()) yaml += `      - '${cmd.trim()}'\n`;
+                    });
+                }
+            }
+
+            yaml += `  items:\n`;
+
+            Object.keys(menuItems).forEach(slot => {
+                const item = menuItems[slot];
+                const itemKey = item.name || `item_${slot}`;
+                
+                yaml += `    '${itemKey}':\n`;
+                yaml += `      material: ${item.material}\n`;
+                
+                // Add amount if different from 1
+                if (item.amount && item.amount !== 1) {
+                    yaml += `      amount: ${item.amount}\n`;
+                }
+                
+                if (item.slots && item.slots.length > 0) {
+                    yaml += `      slots:\n`;
+                    const slotRanges = formatSlotRanges(item.slots);
+                    slotRanges.forEach(range => {
+                        yaml += `        - ${range}\n`;
+                    });
+                } else {
+                    yaml += `      slot: ${slot}\n`;
+                }
+                
+                yaml += `      priority: ${item.priority}\n`;
+                yaml += `      display_name: "${item.display_name}"\n`;
+
+                if (item.lore && item.lore.length > 0) {
+                    yaml += `      lore:\n`;
+                    item.lore.forEach(line => {
+                        yaml += `        - '${line}'\n`;
+                    });
+                }
+
+                // Add requirements for left click
+                if (item.left_click_requirement) {
+                    yaml += `      left_click_requirement:\n`;
+                    yaml += formatRequirements(item.left_click_requirement);
+                }
+
+                // Add left click commands
+                if (item.left_click_commands && item.left_click_commands.length > 0) {
+                    yaml += `      left_click_commands:\n`;
+                    item.left_click_commands.forEach(cmd => {
+                        yaml += `        - '${cmd}'\n`;
+                    });
+                }
+
+                // Add requirements for right click
+                if (item.right_click_requirement) {
+                    yaml += `      right_click_requirement:\n`;
+                    yaml += formatRequirements(item.right_click_requirement);
+                }
+
+                // Add right click commands
+                if (item.right_click_commands && item.right_click_commands.length > 0) {
+                    yaml += `      right_click_commands:\n`;
+                    item.right_click_commands.forEach(cmd => {
+                        yaml += `        - '${cmd}'\n`;
+                    });
+                }
+            });
+
+            document.getElementById('yamlOutput').textContent = yaml;
+        }
+
+        function formatSlotRanges(slots) {
+            const ranges = [];
+            slots.sort((a, b) => a - b);
+            
+            let start = slots[0];
+            let end = slots[0];
+            
+            for (let i = 1; i < slots.length; i++) {
+                if (slots[i] === end + 1) {
+                    end = slots[i];
+                } else {
+                    if (start === end) {
+                        ranges.push(start.toString());
+                    } else {
+                        ranges.push(`${start}-${end}`);
+                    }
+                    start = end = slots[i];
+                }
+            }
+            
+            if (start === end) {
+                ranges.push(start.toString());
+            } else {
+                ranges.push(`${start}-${end}`);
+            }
+            
+            return ranges;
+        }
+
+        function formatRequirements(requirements) {
+            let yaml = `        requirements:\n`;
+            Object.keys(requirements).forEach(key => {
+                const req = requirements[key];
+                yaml += `          ${key}:\n`;
+                yaml += `            type: "${req.type}"\n`;
+                if (req.expression) {
+                    yaml += `            expression: "${req.expression}"\n`;
+                } else {
+                    yaml += `            input: "${req.input}"\n`;
+                    yaml += `            output: "${req.output}"\n`;
+                }
+            });
+            
+            if (requirements.deny_commands) {
+                yaml += `        deny_commands:\n`;
+                requirements.deny_commands.forEach(cmd => {
+                    yaml += `          - '${cmd}'\n`;
+                });
+            }
+            
+            return yaml;
+        }
+
+        function addOpenRequirement() {
+            const key = prompt('Nombre del requisito:');
+            if (!key) return;
+            
+            const type = prompt('Tipo de requisito (string equals, Javascript, etc.):');
+            if (!type) return;
+            
+            openRequirements[key] = {
+                type: type,
+                input: '%player_world%',
+                output: 'world'
+            };
+            
+            updateOpenRequirementsDisplay();
+        }
+
+        function updateOpenRequirementsDisplay() {
+            const container = document.getElementById('openRequirements');
+            container.innerHTML = '';
+            
+            Object.keys(openRequirements).forEach(key => {
+                const req = openRequirements[key];
+                const div = document.createElement('div');
+                div.className = 'requirement-item';
+                div.innerHTML = `
+                    <strong>${key}</strong>
+                    <input type="text" placeholder="Tipo" value="${req.type}" onchange="openRequirements['${key}'].type = this.value; generateYaml();">
+                    <input type="text" placeholder="Input" value="${req.input}" onchange="openRequirements['${key}'].input = this.value; generateYaml();">
+                    <input type="text" placeholder="Output" value="${req.output}" onchange="openRequirements['${key}'].output = this.value; generateYaml();">
+                    <button class="btn btn-danger" onclick="delete openRequirements['${key}']; updateOpenRequirementsDisplay(); generateYaml();">Eliminar</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addRequirement(clickType) {
+            const key = prompt('Nombre del requisito:');
+            if (!key) return;
+            
+            if (!menuItems[selectedSlot]) return;
+            
+            const reqKey = clickType + '_click_requirement';
+            if (!menuItems[selectedSlot][reqKey]) {
+                menuItems[selectedSlot][reqKey] = { requirements: {}, deny_commands: [] };
+            }
+            
+            menuItems[selectedSlot][reqKey].requirements[key] = {
+                type: 'Javascript',
+                expression: '%player_level% >= 10'
+            };
+            
+            updateRequirementsDisplay(clickType);
+        }
+
+        function updateRequirementsDisplay(clickType) {
+            const container = document.getElementById(clickType + 'Requirements');
+            if (!container || !menuItems[selectedSlot]) return;
+            
+            const reqKey = clickType + '_click_requirement';
+            const requirements = menuItems[selectedSlot][reqKey];
+            
+            container.innerHTML = '';
+            
+            if (requirements && requirements.requirements) {
+                Object.keys(requirements.requirements).forEach(key => {
+                    const req = requirements.requirements[key];
+                    const div = document.createElement('div');
+                    div.className = 'requirement-item';
+                    div.innerHTML = `
+                        <strong>${key}</strong>
+                        <select onchange="updateRequirementType('${clickType}', '${key}', this.value)">
+                            <option value="Javascript" ${req.type === 'Javascript' ? 'selected' : ''}>Javascript</option>
+                            <option value="string equals" ${req.type === 'string equals' ? 'selected' : ''}>String Equals</option>
+                            <option value="!string equals" ${req.type === '!string equals' ? 'selected' : ''}>String Not Equals</option>
+                            <option value="has permission" ${req.type === 'has permission' ? 'selected' : ''}>Has Permission</option>
+                        </select>
+                        ${req.type === 'Javascript' ? 
+                            `<input type="text" placeholder="Expression" value="${req.expression || ''}" onchange="updateRequirementValue('${clickType}', '${key}', 'expression', this.value)">` :
+                            `<input type="text" placeholder="Input" value="${req.input || ''}" onchange="updateRequirementValue('${clickType}', '${key}', 'input', this.value)">
+                             <input type="text" placeholder="Output" value="${req.output || ''}" onchange="updateRequirementValue('${clickType}', '${key}', 'output', this.value)">`
+                        }
+                        <button class="btn btn-danger" onclick="removeRequirement('${clickType}', '${key}')">Eliminar</button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+        }
+
+        function updateRequirementType(clickType, key, type) {
+            const reqKey = clickType + '_click_requirement';
+            if (!menuItems[selectedSlot][reqKey]) return;
+            
+            menuItems[selectedSlot][reqKey].requirements[key].type = type;
+            updateRequirementsDisplay(clickType);
+            generateYaml();
+        }
+
+        function updateRequirementValue(clickType, key, field, value) {
+            const reqKey = clickType + '_click_requirement';
+            if (!menuItems[selectedSlot][reqKey]) return;
+            
+            menuItems[selectedSlot][reqKey].requirements[key][field] = value;
+            generateYaml();
+        }
+
+        function removeRequirement(clickType, key) {
+            const reqKey = clickType + '_click_requirement';
+            if (!menuItems[selectedSlot][reqKey]) return;
+            
+            delete menuItems[selectedSlot][reqKey].requirements[key];
+            updateRequirementsDisplay(clickType);
+            generateYaml();
+        }
+
+        function copyYaml() {
+            const yamlText = document.getElementById('yamlOutput').textContent;
+            navigator.clipboard.writeText(yamlText).then(() => {
+                const btn = document.querySelector('.btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ ¡Copiado!';
+                btn.style.background = 'linear-gradient(45deg, #00ff88, #00d4aa)';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        function saveConfig() {
+            const config = {
+                menuName: document.getElementById('menuName').value,
+                menuTitle: document.getElementById('menuTitle').value,
+                menuSize: document.getElementById('menuSize').value,
+                openCommands: document.getElementById('openCommands').value,
+                denyCommands: document.getElementById('denyCommands').value,
+                openRequirements: openRequirements,
+                menuItems: menuItems
+            };
+            
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${config.menuName}_config.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadConfig() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const config = JSON.parse(e.target.result);
+                        
+                        document.getElementById('menuName').value = config.menuName || '';
+                        document.getElementById('menuTitle').value = config.menuTitle || '';
+                        document.getElementById('menuSize').value = config.menuSize || 54;
+                        document.getElementById('openCommands').value = config.openCommands || '';
+                        document.getElementById('denyCommands').value = config.denyCommands || '';
+                        
+                        openRequirements = config.openRequirements || {};
+                        menuItems = config.menuItems || {};
+                        
+                        updateOpenRequirementsDisplay();
+                        updatePreview();
+                        
+                        alert('✅ Configuración cargada correctamente');
+                    } catch (error) {
+                        alert('❌ Error al cargar la configuración: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function showImportDialog() {
+            document.getElementById('importDialog').classList.add('active');
+            document.getElementById('importTextarea').focus();
+        }
+
+        function closeImportDialog() {
+            document.getElementById('importDialog').classList.remove('active');
+            document.getElementById('importTextarea').value = '';
+        }
+
+        function importYaml() {
+            const yamlText = document.getElementById('importTextarea').value.trim();
+            if (!yamlText) {
+                alert('❌ Por favor, pega una configuración YAML válida');
+                return;
+            }
+
+            try {
+                const parsedConfig = parseYamlConfig(yamlText);
+                
+                // Load general menu configuration
+                document.getElementById('menuName').value = parsedConfig.menuName || 'imported_menu';
+                document.getElementById('menuTitle').value = parsedConfig.menu_title || '&7▸ &aMenus Importado';
+                document.getElementById('menuSize').value = parsedConfig.size || 54;
+                
+                // Load open commands
+                if (parsedConfig.open_command) {
+                    const commands = Array.isArray(parsedConfig.open_command) 
+                        ? parsedConfig.open_command 
+                        : [parsedConfig.open_command];
+                    document.getElementById('openCommands').value = commands.join('\n');
+                }
+
+                // Load open requirements
+                openRequirements = {};
+                if (parsedConfig.open_requirement && parsedConfig.open_requirement.requirements) {
+                    openRequirements = parsedConfig.open_requirement.requirements;
+                }
+                
+                // Load deny commands
+                if (parsedConfig.open_requirement && parsedConfig.open_requirement.deny_commands) {
+                    document.getElementById('denyCommands').value = parsedConfig.open_requirement.deny_commands.join('\n');
+                }
+
+                // Load menu items
+                menuItems = {};
+                if (parsedConfig.items) {
+                    Object.keys(parsedConfig.items).forEach(itemKey => {
+                        const item = parsedConfig.items[itemKey];
+                        
+                        // Determine slots for this item
+                        let slots = [];
+                        if (item.slot !== undefined) {
+                            slots = [parseInt(item.slot)];
+                        } else if (item.slots) {
+                            slots = parseYamlSlots(item.slots);
+                        }
+
+                        // Create item configuration for each slot
+                        slots.forEach(slot => {
+                            menuItems[slot] = {
+                                name: itemKey,
+                                material: item.material || 'DIAMOND',
+                                display_name: item.display_name || '&fItem',
+                                lore: item.lore || [],
+                                priority: item.priority || 1,
+                                amount: item.amount || 1,
+                                left_click_commands: item.left_click_commands || [],
+                                right_click_commands: item.right_click_commands || [],
+                                slots: slots.length > 1 ? slots : undefined
+                            };
+
+                            // Load requirements
+                            if (item.left_click_requirement) {
+                                menuItems[slot].left_click_requirement = item.left_click_requirement;
+                            }
+                            if (item.right_click_requirement) {
+                                menuItems[slot].right_click_requirement = item.right_click_requirement;
+                            }
+                        });
+                    });
+                }
+
+                updateOpenRequirementsDisplay();
+                updatePreview();
+                closeImportDialog();
+                
+                alert('✅ Configuración YAML importada correctamente!\n\n' +
+                      `📋 Menú: ${parsedConfig.menuName}\n` +
+                      `📏 Tamaño: ${parsedConfig.size} slots\n` +
+                      `🎯 Items importados: ${Object.keys(parsedConfig.items || {}).length}`);
+                
+            } catch (error) {
+                alert('❌ Error al importar la configuración YAML:\n\n' + error.message + 
+                      '\n\nAsegúrate de que el formato YAML sea válido.');
+                console.error('YAML Import Error:', error);
+            }
+        }
+
+        function parseYamlConfig(yamlText) {
+            const lines = yamlText.split('\n');
+            const config = {};
+            let currentPath = [];
+            let currentObject = config;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const trimmed = line.trim();
+                
+                if (!trimmed || trimmed.startsWith('#')) continue;
+                
+                const indent = line.length - line.trimStart().length;
+                const colonIndex = line.indexOf(':');
+                
+                if (colonIndex === -1) continue;
+                
+                const key = line.substring(0, colonIndex).trim();
+                const value = line.substring(colonIndex + 1).trim();
+                
+                // Adjust current path based on indentation
+                const depth = Math.floor(indent / 2);
+                currentPath = currentPath.slice(0, depth);
+                currentObject = config;
+                
+                for (const pathKey of currentPath) {
+                    currentObject = currentObject[pathKey];
+                }
+                
+                if (depth === 0 && !config.menuName) {
+                    config.menuName = key;
+                    config[key] = {};
+                    currentPath = [key];
+                    currentObject = config[key];
+                    continue;
+                }
+                
+                if (value) {
+                    // Handle different value types
+                    if (value.startsWith("'") && value.endsWith("'")) {
+                        currentObject[key] = value.slice(1, -1);
+                    } else if (value.startsWith('"') && value.endsWith('"')) {
+                        currentObject[key] = value.slice(1, -1);
+                    } else if (!isNaN(value)) {
+                        currentObject[key] = parseInt(value);
+                    } else if (value === 'true' || value === 'false') {
+                        currentObject[key] = value === 'true';
+                    } else {
+                        currentObject[key] = value;
+                    }
+                } else {
+                    // Handle arrays and objects
+                    currentObject[key] = {};
+                    currentPath.push(key);
+                }
+                
+                // Handle array items (lines starting with -)
+                if (trimmed.startsWith('- ')) {
+                    const parentKey = currentPath[currentPath.length - 1];
+                    if (!Array.isArray(currentObject[parentKey])) {
+                        currentObject[parentKey] = [];
+                    }
+                    
+                    let arrayValue = trimmed.substring(2).trim();
+                    if (arrayValue.startsWith("'") && arrayValue.endsWith("'")) {
+                        arrayValue = arrayValue.slice(1, -1);
+                    } else if (arrayValue.startsWith('"') && arrayValue.endsWith('"')) {
+                        arrayValue = arrayValue.slice(1, -1);
+                    }
+                    
+                    currentObject[parentKey].push(arrayValue);
+                }
+            }
+            
+            return config[config.menuName] || config;
+        }
+
+        function parseYamlSlots(slots) {
+            if (!Array.isArray(slots)) return [];
+            
+            const result = [];
+            
+            slots.forEach(slot => {
+                if (typeof slot === 'number') {
+                    result.push(slot);
+                } else if (typeof slot === 'string') {
+                    if (slot.includes('-')) {
+                        const [start, end] = slot.split('-').map(n => parseInt(n.trim()));
+                        for (let i = start; i <= end; i++) {
+                            result.push(i);
+                        }
+                    } else {
+                        const parsed = parseInt(slot);
+                        if (!isNaN(parsed)) {
+                            result.push(parsed);
+                        }
+                    }
+                }
+            });
+            
+            return result;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePreview();
+        });
+    </script>
+</body>
+</html>
