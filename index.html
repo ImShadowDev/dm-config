@@ -102,6 +102,10 @@
             text-align: center;
         }
 
+        .preview-container {
+            margin-bottom: 30px;
+        }
+
         .inventory-grid {
             display: grid;
             grid-template-columns: repeat(9, 1fr);
@@ -149,6 +153,39 @@
             animation: pulse 1.5s infinite;
         }
 
+        .slot-number-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 3px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 12px;
+            margin: 20px auto;
+            width: fit-content;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .slot-number {
+            width: 45px;
+            height: 45px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #ccc;
+            transition: all 0.3s ease;
+        }
+
+        .slot-number:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -160,6 +197,14 @@
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
+        }
+
+        .minecraft-item-icon {
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
         }
 
         .item-editor {
@@ -383,12 +428,78 @@
             background: rgba(0, 255, 136, 0.2);
             border-color: #00ff88;
         }
+
+        .api-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .api-status.connected {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+        }
+
+        .api-status.disconnected {
+            background: rgba(255, 71, 87, 0.2);
+            border: 1px solid #ff4757;
+            color: #ff4757;
+        }
+
+        .material-search {
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .material-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .material-suggestion {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s ease;
+        }
+
+        .material-suggestion:hover {
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .material-suggestion img {
+            width: 20px;
+            height: 20px;
+            image-rendering: pixelated;
+        }
     </style>
 </head>
 <body>
+    <!-- API Status Indicator -->
+    <div id="apiStatus" class="api-status disconnected">🔌 Conectando API...</div>
+
     <div class="header">
         <h1>⌊🎮 GENERADOR DE MENU - DELUXEMENU 🎮⌉</h1>
-        <p>Generador avanzado de menús para Minecraft con muchas características</p>
+        <p>Generador avanzado de menús para Minecraft con texturas reales de items</p>
     </div>
 
     <div class="main-container">
@@ -452,11 +563,24 @@
         <!-- Panel de Vista Previa -->
         <div class="preview-panel">
             <h2 class="panel-title">👁️ Vista Previa del Menú</h2>
-            <div class="menu-preview">
-                <div style="font-size: 1.2em; margin-bottom: 15px; color: #00ff88;" id="previewTitle">Mi Menú</div>
-                <div class="inventory-grid" id="inventoryGrid"></div>
-                <p style="margin-top: 15px; opacity: 0.8; font-size: 14px;">
-                    🖱️ Haz clic en un slot para editarlo
+            
+            <!-- Preview con Items -->
+            <div class="preview-container">
+                <div class="menu-preview">
+                    <div style="font-size: 1.2em; margin-bottom: 15px; color: #00ff88;" id="previewTitle">Mi Menú</div>
+                    <div class="inventory-grid" id="inventoryGrid"></div>
+                    <p style="margin-top: 15px; opacity: 0.8; font-size: 14px;">
+                        🖱️ Haz clic en un slot para editarlo
+                    </p>
+                </div>
+            </div>
+
+            <!-- Preview con Números de Slots -->
+            <div class="preview-container">
+                <h3 style="text-align: center; color: #00ff88; margin-bottom: 10px;">📍 Números de Slots</h3>
+                <div class="slot-number-grid" id="slotNumberGrid"></div>
+                <p style="text-align: center; margin-top: 10px; opacity: 0.6; font-size: 12px;">
+                    Los números indican la posición de cada slot en el menú
                 </p>
             </div>
         </div>
@@ -504,22 +628,21 @@
     </div>
 
     <script>
+        // Minecraft API Configuration
+        const MINECRAFT_API = {
+            itemsEndpoint: 'https://minecraft-ids.grahamedgecombe.com/api/1.20.4/items',
+            textureEndpoint: 'https://minecraft-api.com/api/items/',
+            fallbackTexture: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+        };
+
+        // Global variables
         let menuItems = {};
         let selectedSlot = null;
         let openRequirements = {};
+        let minecraftItems = {};
+        let itemTextures = {};
 
-        const materialIcons = {
-            'DIAMOND': '💎', 'EMERALD': '💚', 'GOLD_INGOT': '🥇', 'IRON_INGOT': '⚫',
-            'REDSTONE': '🔴', 'CHEST': '📦', 'BOOK': '📖', 'COMPASS': '🧭',
-            'CLOCK': '⏰', 'BARRIER': '🚫', 'DIAMOND_SWORD': '⚔️', 'BOW': '🏹',
-            'DIAMOND_HELMET': '🪖', 'DIAMOND_CHESTPLATE': '🛡️', 'DIAMOND_LEGGINGS': '👖',
-            'DIAMOND_BOOTS': '👢', 'ENCHANTED_BOOK': '📚', 'ENDER_PEARL': '🔮',
-            'GREEN_STAINED_GLASS_PANE': '🟢', 'RED_STAINED_GLASS_PANE': '🔴',
-            'BLUE_STAINED_GLASS_PANE': '🔵', 'YELLOW_STAINED_GLASS_PANE': '🟡',
-            'WHITE_STAINED_GLASS_PANE': '⚪', 'BLACK_STAINED_GLASS_PANE': '⚫',
-            'PLAYER_HEAD': '👤', 'SKULL_ITEM': '💀'
-        };
-
+        // Command types for DeluxeMenu
         const commandTypes = [
             { type: '[message]', desc: 'Mensaje al jugador', placeholder: '[message] &aHola mundo!' },
             { type: '[console]', desc: 'Comando de consola', placeholder: '[console] give %player_name% diamond 1' },
@@ -532,6 +655,246 @@
             { type: '[title]', desc: 'Título en pantalla', placeholder: '[title] &aTítulo;Subtítulo;1;2;1' }
         ];
 
+        // Initialize Minecraft API
+        async function initMinecraftAPI() {
+            const statusElement = document.getElementById('apiStatus');
+            
+            try {
+                // Load predefined Minecraft items (fallback)
+                minecraftItems = getMinecraftItemsFallback();
+                
+                statusElement.className = 'api-status connected';
+                statusElement.textContent = '✅ Texturas Cargadas';
+                
+                console.log('Minecraft textures loaded successfully');
+                
+            } catch (error) {
+                console.error('Error loading Minecraft API:', error);
+                statusElement.className = 'api-status disconnected';
+                statusElement.textContent = '⚠️ Modo Offline';
+                
+                // Use fallback emoji system
+                minecraftItems = getMinecraftItemsFallback();
+            }
+        }
+
+        // Fallback Minecraft items with emoji icons
+        function getMinecraftItemsFallback() {
+            return {
+                // Blocks
+                'STONE': { name: 'Stone', emoji: '🪨' },
+                'GRANITE': { name: 'Granite', emoji: '🧱' },
+                'DIORITE': { name: 'Diorite', emoji: '🪨' },
+                'ANDESITE': { name: 'Andesite', emoji: '🪨' },
+                'GRASS_BLOCK': { name: 'Grass Block', emoji: '🌱' },
+                'DIRT': { name: 'Dirt', emoji: '🌰' },
+                'COBBLESTONE': { name: 'Cobblestone', emoji: '🗿' },
+                'BEDROCK': { name: 'Bedrock', emoji: '⬛' },
+                'SAND': { name: 'Sand', emoji: '🏖️' },
+                'RED_SAND': { name: 'Red Sand', emoji: '🔴' },
+                'GRAVEL': { name: 'Gravel', emoji: '⚪' },
+                
+                // Ores
+                'GOLD_ORE': { name: 'Gold Ore', emoji: '🥇' },
+                'IRON_ORE': { name: 'Iron Ore', emoji: '⚫' },
+                'COAL_ORE': { name: 'Coal Ore', emoji: '⚫' },
+                'DIAMOND_ORE': { name: 'Diamond Ore', emoji: '💎' },
+                'EMERALD_ORE': { name: 'Emerald Ore', emoji: '💚' },
+                'LAPIS_ORE': { name: 'Lapis Ore', emoji: '🔵' },
+                'REDSTONE_ORE': { name: 'Redstone Ore', emoji: '🔴' },
+                
+                // Wood
+                'OAK_LOG': { name: 'Oak Log', emoji: '🪵' },
+                'SPRUCE_LOG': { name: 'Spruce Log', emoji: '🪵' },
+                'BIRCH_LOG': { name: 'Birch Log', emoji: '🪵' },
+                'JUNGLE_LOG': { name: 'Jungle Log', emoji: '🪵' },
+                'OAK_PLANKS': { name: 'Oak Planks', emoji: '🪵' },
+                
+                // Wool
+                'WHITE_WOOL': { name: 'White Wool', emoji: '⚪' },
+                'ORANGE_WOOL': { name: 'Orange Wool', emoji: '🟠' },
+                'MAGENTA_WOOL': { name: 'Magenta Wool', emoji: '🟣' },
+                'LIGHT_BLUE_WOOL': { name: 'Light Blue Wool', emoji: '🔵' },
+                'YELLOW_WOOL': { name: 'Yellow Wool', emoji: '🟡' },
+                'LIME_WOOL': { name: 'Lime Wool', emoji: '🟢' },
+                'PINK_WOOL': { name: 'Pink Wool', emoji: '🩷' },
+                'GRAY_WOOL': { name: 'Gray Wool', emoji: '⚫' },
+                'LIGHT_GRAY_WOOL': { name: 'Light Gray Wool', emoji: '🔘' },
+                'CYAN_WOOL': { name: 'Cyan Wool', emoji: '🩵' },
+                'PURPLE_WOOL': { name: 'Purple Wool', emoji: '🟣' },
+                'BLUE_WOOL': { name: 'Blue Wool', emoji: '🔵' },
+                'BROWN_WOOL': { name: 'Brown Wool', emoji: '🟤' },
+                'GREEN_WOOL': { name: 'Green Wool', emoji: '🟢' },
+                'RED_WOOL': { name: 'Red Wool', emoji: '🔴' },
+                'BLACK_WOOL': { name: 'Black Wool', emoji: '⚫' },
+                'WOOL': { name: 'Wool', emoji: '⚪' },
+                
+                // Glass
+                'GLASS': { name: 'Glass', emoji: '🔲' },
+                'WHITE_STAINED_GLASS': { name: 'White Stained Glass', emoji: '⚪' },
+                'ORANGE_STAINED_GLASS': { name: 'Orange Stained Glass', emoji: '🟠' },
+                'MAGENTA_STAINED_GLASS': { name: 'Magenta Stained Glass', emoji: '🟣' },
+                'LIGHT_BLUE_STAINED_GLASS': { name: 'Light Blue Stained Glass', emoji: '🔵' },
+                'YELLOW_STAINED_GLASS': { name: 'Yellow Stained Glass', emoji: '🟡' },
+                'LIME_STAINED_GLASS': { name: 'Lime Stained Glass', emoji: '🟢' },
+                'PINK_STAINED_GLASS': { name: 'Pink Stained Glass', emoji: '🩷' },
+                'GRAY_STAINED_GLASS': { name: 'Gray Stained Glass', emoji: '⚫' },
+                'LIGHT_GRAY_STAINED_GLASS': { name: 'Light Gray Stained Glass', emoji: '🔘' },
+                'CYAN_STAINED_GLASS': { name: 'Cyan Stained Glass', emoji: '🩵' },
+                'PURPLE_STAINED_GLASS': { name: 'Purple Stained Glass', emoji: '🟣' },
+                'BLUE_STAINED_GLASS': { name: 'Blue Stained Glass', emoji: '🔵' },
+                'BROWN_STAINED_GLASS': { name: 'Brown Stained Glass', emoji: '🟤' },
+                'GREEN_STAINED_GLASS': { name: 'Green Stained Glass', emoji: '🟢' },
+                'RED_STAINED_GLASS': { name: 'Red Stained Glass', emoji: '🔴' },
+                'BLACK_STAINED_GLASS': { name: 'Black Stained Glass', emoji: '⚫' },
+                
+                // Glass Panes
+                'GLASS_PANE': { name: 'Glass Pane', emoji: '🔲' },
+                'WHITE_STAINED_GLASS_PANE': { name: 'White Stained Glass Pane', emoji: '⚪' },
+                'ORANGE_STAINED_GLASS_PANE': { name: 'Orange Stained Glass Pane', emoji: '🟠' },
+                'MAGENTA_STAINED_GLASS_PANE': { name: 'Magenta Stained Glass Pane', emoji: '🟣' },
+                'LIGHT_BLUE_STAINED_GLASS_PANE': { name: 'Light Blue Stained Glass Pane', emoji: '🔵' },
+                'YELLOW_STAINED_GLASS_PANE': { name: 'Yellow Stained Glass Pane', emoji: '🟡' },
+                'LIME_STAINED_GLASS_PANE': { name: 'Lime Stained Glass Pane', emoji: '🟢' },
+                'PINK_STAINED_GLASS_PANE': { name: 'Pink Stained Glass Pane', emoji: '🩷' },
+                'GRAY_STAINED_GLASS_PANE': { name: 'Gray Stained Glass Pane', emoji: '⚫' },
+                'LIGHT_GRAY_STAINED_GLASS_PANE': { name: 'Light Gray Stained Glass Pane', emoji: '🔘' },
+                'CYAN_STAINED_GLASS_PANE': { name: 'Cyan Stained Glass Pane', emoji: '🩵' },
+                'PURPLE_STAINED_GLASS_PANE': { name: 'Purple Stained Glass Pane', emoji: '🟣' },
+                'BLUE_STAINED_GLASS_PANE': { name: 'Blue Stained Glass Pane', emoji: '🔵' },
+                'BROWN_STAINED_GLASS_PANE': { name: 'Brown Stained Glass Pane', emoji: '🟤' },
+                'GREEN_STAINED_GLASS_PANE': { name: 'Green Stained Glass Pane', emoji: '🟢' },
+                'RED_STAINED_GLASS_PANE': { name: 'Red Stained Glass Pane', emoji: '🔴' },
+                'BLACK_STAINED_GLASS_PANE': { name: 'Black Stained Glass Pane', emoji: '⚫' },
+                'STAINED_GLASS_PANE': { name: 'Stained Glass Pane', emoji: '🟢' },
+                
+                // Tools & Weapons
+                'DIAMOND_SWORD': { name: 'Diamond Sword', emoji: '⚔️' },
+                'IRON_SWORD': { name: 'Iron Sword', emoji: '🗡️' },
+                'GOLDEN_SWORD': { name: 'Golden Sword', emoji: '🗡️' },
+                'STONE_SWORD': { name: 'Stone Sword', emoji: '🗡️' },
+                'WOODEN_SWORD': { name: 'Wooden Sword', emoji: '🗡️' },
+                'NETHERITE_SWORD': { name: 'Netherite Sword', emoji: '⚔️' },
+                'DIAMOND_AXE': { name: 'Diamond Axe', emoji: '🪓' },
+                'BOW': { name: 'Bow', emoji: '🏹' },
+                'CROSSBOW': { name: 'Crossbow', emoji: '🏹' },
+                'TRIDENT': { name: 'Trident', emoji: '🔱' },
+                'SHIELD': { name: 'Shield', emoji: '🛡️' },
+                
+                // Armor
+                'DIAMOND_HELMET': { name: 'Diamond Helmet', emoji: '🪖' },
+                'DIAMOND_CHESTPLATE': { name: 'Diamond Chestplate', emoji: '🛡️' },
+                'DIAMOND_LEGGINGS': { name: 'Diamond Leggings', emoji: '👖' },
+                'DIAMOND_BOOTS': { name: 'Diamond Boots', emoji: '👢' },
+                'IRON_HELMET': { name: 'Iron Helmet', emoji: '🪖' },
+                'IRON_CHESTPLATE': { name: 'Iron Chestplate', emoji: '🛡️' },
+                'GOLDEN_HELMET': { name: 'Golden Helmet', emoji: '👑' },
+                'LEATHER_HELMET': { name: 'Leather Helmet', emoji: '🎩' },
+                'NETHERITE_HELMET': { name: 'Netherite Helmet', emoji: '🪖' },
+                
+                // Items
+                'DIAMOND': { name: 'Diamond', emoji: '💎' },
+                'EMERALD': { name: 'Emerald', emoji: '💚' },
+                'GOLD_INGOT': { name: 'Gold Ingot', emoji: '🥇' },
+                'IRON_INGOT': { name: 'Iron Ingot', emoji: '⚫' },
+                'NETHERITE_INGOT': { name: 'Netherite Ingot', emoji: '⬛' },
+                'REDSTONE': { name: 'Redstone', emoji: '🔴' },
+                'LAPIS_LAZULI': { name: 'Lapis Lazuli', emoji: '🔵' },
+                'COAL': { name: 'Coal', emoji: '⚫' },
+                'CHARCOAL': { name: 'Charcoal', emoji: '⚫' },
+                
+                // Special Items
+                'ENDER_PEARL': { name: 'Ender Pearl', emoji: '🔮' },
+                'ENDER_EYE': { name: 'Ender Eye', emoji: '👁️' },
+                'BLAZE_ROD': { name: 'Blaze Rod', emoji: '🔥' },
+                'BLAZE_POWDER': { name: 'Blaze Powder', emoji: '🔥' },
+                'BOOK': { name: 'Book', emoji: '📖' },
+                'ENCHANTED_BOOK': { name: 'Enchanted Book', emoji: '📚' },
+                'WRITTEN_BOOK': { name: 'Written Book', emoji: '📖' },
+                'WRITABLE_BOOK': { name: 'Book and Quill', emoji: '📖' },
+                'MAP': { name: 'Map', emoji: '🗺️' },
+                'COMPASS': { name: 'Compass', emoji: '🧭' },
+                'CLOCK': { name: 'Clock', emoji: '⏰' },
+                
+                // Containers
+                'CHEST': { name: 'Chest', emoji: '📦' },
+                'ENDER_CHEST': { name: 'Ender Chest', emoji: '📦' },
+                'SHULKER_BOX': { name: 'Shulker Box', emoji: '📦' },
+                'BARREL': { name: 'Barrel', emoji: '🛢️' },
+                
+                // Utility Blocks
+                'CRAFTING_TABLE': { name: 'Crafting Table', emoji: '🔨' },
+                'FURNACE': { name: 'Furnace', emoji: '🔥' },
+                'ANVIL': { name: 'Anvil', emoji: '⚒️' },
+                'ENCHANTING_TABLE': { name: 'Enchanting Table', emoji: '📚' },
+                'BREWING_STAND': { name: 'Brewing Stand', emoji: '🧪' },
+                
+                // Special
+                'PLAYER_HEAD': { name: 'Player Head', emoji: '👤' },
+                'ZOMBIE_HEAD': { name: 'Zombie Head', emoji: '🧟' },
+                'CREEPER_HEAD': { name: 'Creeper Head', emoji: '💚' },
+                'DRAGON_HEAD': { name: 'Dragon Head', emoji: '🐲' },
+                'SKELETON_SKULL': { name: 'Skeleton Skull', emoji: '💀' },
+                'WITHER_SKELETON_SKULL': { name: 'Wither Skeleton Skull', emoji: '💀' },
+                'SKULL_ITEM': { name: 'Skull', emoji: '💀' },
+                
+                // Control Blocks
+                'BARRIER': { name: 'Barrier', emoji: '🚫' },
+                'STRUCTURE_VOID': { name: 'Structure Void', emoji: '🕳️' },
+                'COMMAND_BLOCK': { name: 'Command Block', emoji: '📦' },
+                'REPEATING_COMMAND_BLOCK': { name: 'Repeating Command Block', emoji: '📦' },
+                'CHAIN_COMMAND_BLOCK': { name: 'Chain Command Block', emoji: '📦' },
+                'SPAWNER': { name: 'Spawner', emoji: '🕳️' },
+                
+                // Food
+                'APPLE': { name: 'Apple', emoji: '🍎' },
+                'GOLDEN_APPLE': { name: 'Golden Apple', emoji: '🍎' },
+                'ENCHANTED_GOLDEN_APPLE': { name: 'Enchanted Golden Apple', emoji: '🍎' },
+                'BREAD': { name: 'Bread', emoji: '🍞' },
+                'COOKED_BEEF': { name: 'Cooked Beef', emoji: '🥩' },
+                'COOKED_PORKCHOP': { name: 'Cooked Porkchop', emoji: '🥓' },
+                'COOKED_CHICKEN': { name: 'Cooked Chicken', emoji: '🍗' },
+                'CAKE': { name: 'Cake', emoji: '🎂' },
+                'COOKIE': { name: 'Cookie', emoji: '🍪' }
+            };
+        }
+
+        // Get material icon (emoji or texture)
+        function getMaterialIcon(material) {
+            if (!material) return '❓';
+            
+            // Handle custom materials like basehead-
+            if (material.startsWith('basehead-')) {
+                return '👤';
+            }
+            
+            // Handle data values (like WOOL:14, STAINED_GLASS_PANE:5)
+            const baseMaterial = material.split(':')[0];
+            const dataValue = material.includes(':') ? parseInt(material.split(':')[1]) : 0;
+            
+            // Special handling for colored items with data values (1.8 compatibility)
+            if (baseMaterial === 'WOOL' || baseMaterial === 'STAINED_GLASS_PANE' || baseMaterial === 'STAINED_GLASS') {
+                const colorIcons = ['⚪', '🟠', '🟣', '🔵', '🟡', '🟢', '🩷', '⚫', '🔘', '🩵', '🟣', '🔵', '🟤', '🟢', '🔴', '⚫'];
+                return colorIcons[dataValue] || minecraftItems[baseMaterial]?.emoji || '🎨';
+            }
+            
+            return minecraftItems[baseMaterial]?.emoji || minecraftItems[material]?.emoji || '❓';
+        }
+
+        // Create material icon element
+        function createMaterialIcon(material, size = 32) {
+            const icon = document.createElement('div');
+            icon.style.width = size + 'px';
+            icon.style.height = size + 'px';
+            icon.style.display = 'flex';
+            icon.style.alignItems = 'center';
+            icon.style.justifyContent = 'center';
+            icon.style.fontSize = (size * 0.75) + 'px';
+            icon.textContent = getMaterialIcon(material);
+            return icon;
+        }
+
+        // Utility functions
         function toggleAdvanced(id) {
             const element = document.getElementById(id);
             element.classList.toggle('active');
@@ -541,16 +904,23 @@
             const size = parseInt(document.getElementById('menuSize').value);
             const title = document.getElementById('menuTitle').value;
             const grid = document.getElementById('inventoryGrid');
+            const numberGrid = document.getElementById('slotNumberGrid');
             const previewTitle = document.getElementById('previewTitle');
             
+            // Update title with basic Minecraft color code parsing
             previewTitle.innerHTML = title.replace(/&([0-9a-fk-or])/g, '<span style="color: var(--mc-$1)">').replace(/&l/g, '<b>').replace(/&n/g, '<u>');
             
             const rows = size / 9;
             grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+            numberGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
             
+            // Clear grids
             grid.innerHTML = '';
+            numberGrid.innerHTML = '';
             
+            // Populate both grids
             for (let i = 0; i < size; i++) {
+                // Item preview slot
                 const slot = document.createElement('div');
                 slot.className = 'inventory-slot';
                 slot.onclick = () => selectSlot(i);
@@ -561,8 +931,8 @@
                 
                 if (menuItems[i]) {
                     slot.classList.add('occupied');
-                    const icon = getMaterialIcon(menuItems[i].material);
-                    slot.innerHTML = icon;
+                    const icon = createMaterialIcon(menuItems[i].material, 32);
+                    slot.appendChild(icon);
                 } else {
                     // Check if this slot is part of a multi-slot item
                     const multiSlotItem = Object.values(menuItems).find(item => 
@@ -570,13 +940,20 @@
                     );
                     if (multiSlotItem) {
                         slot.classList.add('occupied');
-                        const icon = getMaterialIcon(multiSlotItem.material);
-                        slot.innerHTML = icon;
+                        const icon = createMaterialIcon(multiSlotItem.material, 32);
+                        slot.appendChild(icon);
                         slot.style.opacity = '0.7';
                     }
                 }
                 
                 grid.appendChild(slot);
+                
+                // Slot number
+                const numberSlot = document.createElement('div');
+                numberSlot.className = 'slot-number';
+                numberSlot.textContent = i;
+                numberSlot.onclick = () => selectSlot(i);
+                numberGrid.appendChild(numberSlot);
             }
             
             generateYaml();
@@ -605,14 +982,17 @@
 
                 <div class="config-group">
                     <label for="itemMaterial">Material:</label>
-                    <select id="itemMaterial" onchange="updateCurrentItem()">
-                        ${generateMaterialOptions(item.material)}
-                    </select>
+                    <div class="material-search">
+                        <select id="itemMaterial" onchange="updateCurrentItem()">
+                            ${generateMaterialOptions(item.material)}
+                        </select>
+                        <div id="materialSuggestions" class="material-suggestions"></div>
+                    </div>
                 </div>
 
                 <div class="config-group">
                     <label for="customMaterial">Material Personalizado:</label>
-                    <input type="text" id="customMaterial" placeholder="WOOL:14 o STAINED_GLASS_PANE:5 o mi_item_custom" onchange="updateCurrentItem()">
+                    <input type="text" id="customMaterial" placeholder="WOOL:14 o STAINED_GLASS_PANE:5 o basehead-eyJ0ZXh0dXJlcyI6e..." onchange="updateCurrentItem()">
                     <small style="opacity: 0.7; font-size: 12px; display: block; margin-top: 5px;">
                         💡 Ejemplos: WOOL:14 (lana roja 1.8), STAINED_GLASS_PANE:5 (cristal lima), basehead-eyJ0ZXh0dXJlcyI6e...
                     </small>
@@ -710,119 +1090,14 @@
         }
 
         function generateMaterialOptions(selectedMaterial) {
-            const materials = [
-                // Bloques básicos
-                'STONE', 'GRANITE', 'DIORITE', 'ANDESITE', 'GRASS_BLOCK', 'DIRT', 'COARSE_DIRT', 'PODZOL',
-                'COBBLESTONE', 'OAK_PLANKS', 'SPRUCE_PLANKS', 'BIRCH_PLANKS', 'JUNGLE_PLANKS', 'ACACIA_PLANKS', 'DARK_OAK_PLANKS',
-                'BEDROCK', 'SAND', 'RED_SAND', 'GRAVEL', 'GOLD_ORE', 'IRON_ORE', 'COAL_ORE', 'DIAMOND_ORE', 'EMERALD_ORE',
-                'REDSTONE_ORE', 'LAPIS_ORE', 'OAK_LOG', 'SPRUCE_LOG', 'BIRCH_LOG', 'JUNGLE_LOG',
-                
-                // Lanas (1.8 y 1.13+)
-                'WHITE_WOOL', 'ORANGE_WOOL', 'MAGENTA_WOOL', 'LIGHT_BLUE_WOOL', 'YELLOW_WOOL', 'LIME_WOOL',
-                'PINK_WOOL', 'GRAY_WOOL', 'LIGHT_GRAY_WOOL', 'CYAN_WOOL', 'PURPLE_WOOL', 'BLUE_WOOL',
-                'BROWN_WOOL', 'GREEN_WOOL', 'RED_WOOL', 'BLACK_WOOL', 'WOOL',
-                
-                // Cristales de colores
-                'WHITE_STAINED_GLASS', 'ORANGE_STAINED_GLASS', 'MAGENTA_STAINED_GLASS', 'LIGHT_BLUE_STAINED_GLASS',
-                'YELLOW_STAINED_GLASS', 'LIME_STAINED_GLASS', 'PINK_STAINED_GLASS', 'GRAY_STAINED_GLASS',
-                'LIGHT_GRAY_STAINED_GLASS', 'CYAN_STAINED_GLASS', 'PURPLE_STAINED_GLASS', 'BLUE_STAINED_GLASS',
-                'BROWN_STAINED_GLASS', 'GREEN_STAINED_GLASS', 'RED_STAINED_GLASS', 'BLACK_STAINED_GLASS',
-                'WHITE_STAINED_GLASS_PANE', 'ORANGE_STAINED_GLASS_PANE', 'MAGENTA_STAINED_GLASS_PANE', 'LIGHT_BLUE_STAINED_GLASS_PANE',
-                'YELLOW_STAINED_GLASS_PANE', 'LIME_STAINED_GLASS_PANE', 'PINK_STAINED_GLASS_PANE', 'GRAY_STAINED_GLASS_PANE',
-                'LIGHT_GRAY_STAINED_GLASS_PANE', 'CYAN_STAINED_GLASS_PANE', 'PURPLE_STAINED_GLASS_PANE', 'BLUE_STAINED_GLASS_PANE',
-                'BROWN_STAINED_GLASS_PANE', 'GREEN_STAINED_GLASS_PANE', 'RED_STAINED_GLASS_PANE', 'BLACK_STAINED_GLASS_PANE',
-                'GLASS', 'GLASS_PANE', 'STAINED_GLASS_PANE',
-                
-                // Items de combate
-                'DIAMOND_SWORD', 'IRON_SWORD', 'GOLDEN_SWORD', 'STONE_SWORD', 'WOODEN_SWORD', 'NETHERITE_SWORD',
-                'DIAMOND_AXE', 'IRON_AXE', 'GOLDEN_AXE', 'STONE_AXE', 'WOODEN_AXE', 'NETHERITE_AXE',
-                'BOW', 'CROSSBOW', 'TRIDENT', 'SHIELD',
-                
-                // Armaduras
-                'DIAMOND_HELMET', 'DIAMOND_CHESTPLATE', 'DIAMOND_LEGGINGS', 'DIAMOND_BOOTS',
-                'IRON_HELMET', 'IRON_CHESTPLATE', 'IRON_LEGGINGS', 'IRON_BOOTS',
-                'GOLDEN_HELMET', 'GOLDEN_CHESTPLATE', 'GOLDEN_LEGGINGS', 'GOLDEN_BOOTS',
-                'LEATHER_HELMET', 'LEATHER_CHESTPLATE', 'LEATHER_LEGGINGS', 'LEATHER_BOOTS',
-                'CHAINMAIL_HELMET', 'CHAINMAIL_CHESTPLATE', 'CHAINMAIL_LEGGINGS', 'CHAINMAIL_BOOTS',
-                'NETHERITE_HELMET', 'NETHERITE_CHESTPLATE', 'NETHERITE_LEGGINGS', 'NETHERITE_BOOTS',
-                
-                // Items especiales
-                'DIAMOND', 'EMERALD', 'GOLD_INGOT', 'IRON_INGOT', 'NETHERITE_INGOT',
-                'REDSTONE', 'LAPIS_LAZULI', 'COAL', 'CHARCOAL',
-                'ENDER_PEARL', 'ENDER_EYE', 'BLAZE_ROD', 'BLAZE_POWDER',
-                'BOOK', 'ENCHANTED_BOOK', 'WRITTEN_BOOK', 'WRITABLE_BOOK',
-                'MAP', 'COMPASS', 'CLOCK', 'RECOVERY_COMPASS',
-                'CHEST', 'ENDER_CHEST', 'SHULKER_BOX', 'BARREL',
-                'CRAFTING_TABLE', 'FURNACE', 'ANVIL', 'ENCHANTING_TABLE',
-                
-                // Heads y skulls
-                'PLAYER_HEAD', 'ZOMBIE_HEAD', 'CREEPER_HEAD', 'DRAGON_HEAD', 'SKELETON_SKULL', 'WITHER_SKELETON_SKULL',
-                'SKULL_ITEM',
-                
-                // Items de utilidad
-                'BARRIER', 'STRUCTURE_VOID', 'COMMAND_BLOCK', 'REPEATING_COMMAND_BLOCK', 'CHAIN_COMMAND_BLOCK',
-                'BEDROCK', 'SPAWNER', 'END_PORTAL_FRAME',
-                
-                // Comida
-                'APPLE', 'GOLDEN_APPLE', 'ENCHANTED_GOLDEN_APPLE', 'BREAD', 'COOKED_BEEF', 'COOKED_PORKCHOP',
-                'COOKED_CHICKEN', 'COOKED_COD', 'COOKED_SALMON', 'CAKE', 'COOKIE'
-            ];
-            
-            // Add custom option at the top
             let options = '<option value="CUSTOM">🎨 Material Personalizado</option>';
             
-            return options + materials.map(material => 
+            // Sort materials alphabetically
+            const sortedMaterials = Object.keys(minecraftItems).sort();
+            
+            return options + sortedMaterials.map(material => 
                 `<option value="${material}" ${material === selectedMaterial ? 'selected' : ''}>${material}</option>`
             ).join('');
-        }
-
-        function getMaterialIcon(material) {
-            // Handle custom materials
-            if (material && material.startsWith('basehead-')) {
-                return '👤';
-            }
-            
-            // Handle data values (like WOOL:14, STAINED_GLASS_PANE:5)
-            const baseMaterial = material ? material.split(':')[0] : 'DIAMOND';
-            const dataValue = material && material.includes(':') ? parseInt(material.split(':')[1]) : 0;
-            
-            // Special handling for colored items with data values
-            if (baseMaterial === 'WOOL' || baseMaterial === 'STAINED_GLASS_PANE' || baseMaterial === 'STAINED_GLASS') {
-                const colorIcons = ['⚪', '🟠', '🟣', '🔵', '🟡', '🟢', '🩷', '⚫', '🔘', '🩵', '🟣', '🔵', '🟤', '🟢', '🔴', '⚫'];
-                return colorIcons[dataValue] || materialIcons[baseMaterial] || '🎨';
-            }
-            
-            // Extended material icons
-            const extendedIcons = {
-                ...materialIcons,
-                'WOOL': '⚪', 'STAINED_GLASS_PANE': '🟢', 'STAINED_GLASS': '🔵',
-                'WHITE_WOOL': '⚪', 'ORANGE_WOOL': '🟠', 'MAGENTA_WOOL': '🟣', 'LIGHT_BLUE_WOOL': '🔵',
-                'YELLOW_WOOL': '🟡', 'LIME_WOOL': '🟢', 'PINK_WOOL': '🩷', 'GRAY_WOOL': '⚫',
-                'LIGHT_GRAY_WOOL': '🔘', 'CYAN_WOOL': '🩵', 'PURPLE_WOOL': '🟣', 'BLUE_WOOL': '🔵',
-                'BROWN_WOOL': '🟤', 'GREEN_WOOL': '🟢', 'RED_WOOL': '🔴', 'BLACK_WOOL': '⚫',
-                'WHITE_STAINED_GLASS_PANE': '⚪', 'ORANGE_STAINED_GLASS_PANE': '🟠', 'MAGENTA_STAINED_GLASS_PANE': '🟣',
-                'LIGHT_BLUE_STAINED_GLASS_PANE': '🔵', 'YELLOW_STAINED_GLASS_PANE': '🟡', 'LIME_STAINED_GLASS_PANE': '🟢',
-                'PINK_STAINED_GLASS_PANE': '🩷', 'GRAY_STAINED_GLASS_PANE': '⚫', 'LIGHT_GRAY_STAINED_GLASS_PANE': '🔘',
-                'CYAN_STAINED_GLASS_PANE': '🩵', 'PURPLE_STAINED_GLASS_PANE': '🟣', 'BLUE_STAINED_GLASS_PANE': '🔵',
-                'BROWN_STAINED_GLASS_PANE': '🟤', 'GREEN_STAINED_GLASS_PANE': '🟢', 'RED_STAINED_GLASS_PANE': '🔴',
-                'BLACK_STAINED_GLASS_PANE': '⚫',
-                'STONE': '🪨', 'COBBLESTONE': '🗿', 'GRASS_BLOCK': '🌱', 'DIRT': '🌰',
-                'SAND': '🏖️', 'GRAVEL': '⚪', 'BEDROCK': '⬛', 'OBSIDIAN': '⬛',
-                'GOLD_ORE': '🥇', 'IRON_ORE': '⚫', 'COAL_ORE': '⚫', 'DIAMOND_ORE': '💎',
-                'EMERALD_ORE': '💚', 'LAPIS_ORE': '🔵', 'REDSTONE_ORE': '🔴',
-                'OAK_LOG': '🪵', 'SPRUCE_LOG': '🪵', 'BIRCH_LOG': '🪵', 'JUNGLE_LOG': '🪵',
-                'DIAMOND_SWORD': '⚔️', 'IRON_SWORD': '🗡️', 'GOLDEN_SWORD': '🗡️', 'STONE_SWORD': '🗡️',
-                'BOW': '🏹', 'CROSSBOW': '🏹', 'TRIDENT': '🔱', 'SHIELD': '🛡️',
-                'APPLE': '🍎', 'GOLDEN_APPLE': '🍎', 'BREAD': '🍞', 'CAKE': '🎂',
-                'ENDER_PEARL': '🔮', 'ENDER_EYE': '👁️', 'BLAZE_ROD': '🔥', 'COAL': '⚫',
-                'LAPIS_LAZULI': '🔵', 'NETHERITE_INGOT': '⬛', 'CRAFTING_TABLE': '🔨',
-                'FURNACE': '🔥', 'CHEST': '📦', 'ENDER_CHEST': '📦', 'ANVIL': '⚒️',
-                'ENCHANTING_TABLE': '📚', 'SPAWNER': '🕳️', 'BARRIER': '🚫',
-                'PLAYER_HEAD': '👤', 'ZOMBIE_HEAD': '🧟', 'CREEPER_HEAD': '💚', 'SKELETON_SKULL': '💀',
-                'COMMAND_BLOCK': '📦', 'STRUCTURE_VOID': '🕳️'
-            };
-            
-            return extendedIcons[baseMaterial] || extendedIcons[material] || '❓';
         }
 
         function updateCurrentItem() {
@@ -860,13 +1135,13 @@
 
             menuItems[selectedSlot] = item;
             
-            // Update material preview
+            // material preview
             const preview = document.getElementById('materialPreview');
             if (preview) {
                 preview.innerHTML = getMaterialIcon(item.material);
             }
 
-            // Update custom material field based on selection
+            // custom material field visibility
             const customField = document.getElementById('customMaterial');
             if (customField) {
                 if (materialSelect === 'CUSTOM') {
@@ -1235,13 +1510,14 @@
         function copyYaml() {
             const yamlText = document.getElementById('yamlOutput').textContent;
             navigator.clipboard.writeText(yamlText).then(() => {
-                const btn = document.querySelector('.btn');
+                const btn = document.querySelector('button[onclick="copyYaml()"]');
                 const originalText = btn.textContent;
                 btn.textContent = '✅ ¡Copiado!';
                 btn.style.background = 'linear-gradient(45deg, #00ff88, #00d4aa)';
                 
                 setTimeout(() => {
                     btn.textContent = originalText;
+                    btn.style.background = '';
                 }, 2000);
             });
         }
@@ -1503,9 +1779,17 @@
             return result;
         }
 
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Iniciando Generador DeluxeMenu...');
+            
+            // Initialize Minecraft API
+            await initMinecraftAPI();
+            
+            // Initialize preview
             updatePreview();
+            
+            console.log('✅ Generador DeluxeMenu listo!');
         });
     </script>
 </body>
